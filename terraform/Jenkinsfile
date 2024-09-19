@@ -45,7 +45,7 @@ podTemplate(cloud: 'kubernetes', label: 'terraform', yaml: template) {
                     """
                 }
 
-                if (params.action == "apply") 
+                if (params.action == "apply") {
                     stage ("Apply") {
                         sh """
                         cd terraform
