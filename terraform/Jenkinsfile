@@ -49,14 +49,14 @@ podTemplate(cloud: 'kubernetes', label: 'terraform', yaml: template) {
                     stage ("Apply") {
                         sh """
                         cd terraform
-                        terraform apply -auto-approve 
+                        terraform apply -auto-approve -var "ami_id=${params.ami_id}" -var "region=${params.region}"
                         """
                     }
                 } else {
                     stage ("Destroy") {
                         sh """
                         cd terraform
-                        terraform destroy -auto-approve
+                        terraform destroy -auto-approve -var "ami_id=${params.ami_id}" -var "region=${params.region}"
                         """
                     }
                 }
