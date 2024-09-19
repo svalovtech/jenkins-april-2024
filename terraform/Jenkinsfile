@@ -13,51 +13,53 @@ spec:
     - sleep
     - "3600"
     '''
-    properties([
-        parameters([
-            choice(choices: ['apply', 'destroy'], description: 'Provide your choice', name: 'action')
-            ])
-            ])
+
+properties([
+    parameters([
+        choice(choices: ['apply', 'destroy'], description: 'Choose action', name: 'action'),
+        string(name: 'ami_id', defaultValue: 'ami-037774efca2da0726', description: 'Enter AMI ID'),
+        choice(name: 'region', choices: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2'], description: 'Select AWS Region')
+    ])
+])
 
 podTemplate(cloud: 'kubernetes', label: 'terraform', yaml: template) {
     node ("terraform") {
         container("terraform") {
-    stage ("Pull code") {
-        git branch: 'main', url: 'https://github.com/svalovtech/jenkins-april-2024.git'
-    }
+            stage ("Pull code") {
+                git branch: 'main', url: 'https://github.com/svalovtech/jenkins-april-2024.git'
+            }
 
+            stage ("Write tfvars") {
+                writeFile file: 'terraform.tfvars', text: """
+                ami_id = "${params.ami_id}"
+                region = "${params.region}"
+                """
+            }
 
-    withCredentials([usernamePassword(credentialsId: 'aws-creds', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+            withCredentials([usernamePassword(credentialsId: 'aws-creds', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+                stage ("Init") {
+                    sh """
+                    cd terraform
+                    terraform init
+                    """
+                }
 
-        stage ("Init") {
-        sh """
-        cd terraform
-        terraform init
-        """
-    }
-    if(params.action == "apply") {
-        
-
-        stage ("Apply") {
-
-        sh """
-        cd terraform
-        terraform apply -auto-approve
-        """
-    }
-    }
-    else {
-
-        stage ("Destroy") {
-
-        sh """
-        cd terraform
-        terraform destroy -auto-approve
-        """
-    }
-    }
+                if (params.action == "apply") {
+                   stage ("Apply") {
+                        sh """
+                        cd terraform
+                        terraform apply -auto-approve 
+                        """
+                    }
+                } else {
+                    stage ("Destroy") {
+                        sh """
+                        cd terraform
+                        terraform destroy -auto-approve
+                        """
 }
-
 }
-    }
+ }
+ }
+  }
 }
