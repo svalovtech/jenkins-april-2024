@@ -45,18 +45,11 @@ podTemplate(cloud: 'kubernetes', label: 'terraform', yaml: template) {
                     """
                 }
 
-                if (params.action == "apply") {
-                    stage ("Plan") {
-                        sh """
-                        cd terraform
-                        terraform plan -out=tfplan
-                        """
-                    }
-
+                if (params.action == "apply") 
                     stage ("Apply") {
                         sh """
                         cd terraform
-                        terraform apply -auto-approve tfplan
+                        terraform apply -auto-approve 
                         """
                     }
                 } else {
