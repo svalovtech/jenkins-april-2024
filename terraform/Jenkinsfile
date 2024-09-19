@@ -17,10 +17,11 @@ spec:
 properties([
     parameters([
         choice(choices: ['apply', 'destroy'], description: 'Choose action', name: 'action'),
-        string(name: 'ami_id', defaultValue: 'ami-037774efca2da0726', description: 'Enter AMI ID'),
+        string(name: 'ami_id', defaultValue: '', description: 'AMI ID'),
         choice(name: 'region', choices: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2'], description: 'Select AWS Region')
     ])
 ])
+
 
 podTemplate(cloud: 'kubernetes', label: 'terraform', yaml: template) {
     node ("terraform") {
