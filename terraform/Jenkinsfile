@@ -1,45 +1,70 @@
-podTemplate(cloud: 'kubernetes', label: 'terraform', yaml: template) {
-    node ("terraform") {
-        container("terraform") {
-            stage ("Pull code") {
-                git branch: 'main', url: 'https://github.com/svalovtech/jenkins-april-2024.git'
-            }
+def template = '''
+apiVersion: v1
+kind: Pod
+metadata:
+  name: terraform
+  labels:
+    run: terraform
+spec:
+  containers:
+  - name: terraform
+    image: hashicorp/terraform
+    command:
+    - sleep
+    - "3600"
+    '''
+    
+pipeline {
+    agent none
+    stages {
+        stage('Terraform') {
+            steps {
+                podTemplate(cloud: 'kubernetes', label: 'terraform', yaml: template) {
+                    node("terraform") {
+                        container("terraform") {
+                            stage("Pull code") {
+                                git branch: 'main', url: 'https://github.com/svalovtech/jenkins-april-2024.git'
+                            }
 
-            stage ("Write tfvars") {
-                writeFile file: 'terraform.tfvars', text: """
-                ami_id = "${params.ami_id}"
-                region = "${params.region}"
-                """
-            }
+                            stage("Write tfvars") {
+                                writeFile file: 'terraform.tfvars', text: """
+                                ami_id = "${params.ami_id}"
+                                region = "${params.region}"
+                                """
+                            }
 
-            withCredentials([usernamePassword(credentialsId: 'aws-creds', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
-                stage ("Init") {
-                    sh """
-                    cd terraform
-                    terraform init
-                    """
-                }
+                            withCredentials([usernamePassword(credentialsId: 'aws-creds', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+                                stage("Init") {
+                                    sh """
+                                    cd terraform
+                                    terraform init
+                                    """
+                                }
 
-                if (params.action == "apply") {
-                    stage ("Plan") {
-                        sh """
-                        cd terraform
-                        terraform plan -out=tfplan -var-file=terraform.tfvars
-                        """
-                    }
+                                if (params.action == "apply") {
+                                    stage("Plan") {
+                                        sh """
+                                        cd terraform
+                                        terraform plan -out=tfplan -var-file=terraform.tfvars
+                                        """
+                                    }
 
-                    stage ("Apply") {
-                        sh """
-                        cd terraform
-                        terraform apply -auto-approve -var-file=terraform.tfvars tfplan
-                        """
-                    }
-                } else {
-                    stage ("Destroy") {
-                        sh """
-                        cd terraform
-                        terraform destroy -auto-approve -var-file=terraform.tfvars
-                        """
+                                    stage("Apply") {
+                                        sh """
+                                        cd terraform
+                                        terraform apply -auto-approve -var-file=terraform.tfvars tfplan
+                                        """
+                                    }
+                                } else {
+                                    stage("Destroy") {
+                                        sh """
+                                        cd terraform
+                                        terraform destroy -auto-approve -var-file=terraform.tfvars
+                                        """
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
