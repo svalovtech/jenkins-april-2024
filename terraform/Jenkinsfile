@@ -48,14 +48,14 @@ podTemplate(cloud: 'kubernetes', label: 'terraform', yaml: template) {
                    stage ("Apply") {
                         sh """
                         cd terraform
-                        terraform apply -auto-approve 
+                        terraform apply -auto-approve -var-file=terraform.tfvars
                         """
                     }
                 } else {
                     stage ("Destroy") {
                         sh """
                         cd terraform
-                        terraform destroy -auto-approve
+                        terraform destroy -auto-approve -var-file=terraform.tfvars
                         """
 }
 }
