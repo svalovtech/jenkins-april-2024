@@ -1,4 +1,4 @@
-def template = '''
+template = '''
 apiVersion: v1
 kind: Pod
 metadata:
@@ -13,58 +13,57 @@ spec:
     - sleep
     - "3600"
     '''
-    
-pipeline {
-    agent none
-    stages {
-        stage('Terraform') {
-            steps {
-                podTemplate(cloud: 'kubernetes', label: 'terraform', yaml: template) {
-                    node("terraform") {
-                        container("terraform") {
-                            stage("Pull code") {
-                                git branch: 'main', url: 'https://github.com/svalovtech/jenkins-april-2024.git'
-                            }
 
-                            stage("Write tfvars") {
-                                writeFile file: 'terraform.tfvars', text: """
-                                ami_id = "${params.ami_id}"
-                                region = "${params.region}"
-                                """
-                            }
+properties([
+    parameters([
+        choice(choices: ['apply', 'destroy'], description: 'Choose action', name: 'action'),
+        string(name: 'ami_id', defaultValue: 'ami-037774efca2da0726', description: 'Enter AMI ID'),
+        choice(name: 'region', choices: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2'], description: 'Select AWS Region')
+    ])
+])
 
-                            withCredentials([usernamePassword(credentialsId: 'aws-creds', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
-                                stage("Init") {
-                                    sh """
-                                    cd terraform
-                                    terraform init
-                                    """
-                                }
+podTemplate(cloud: 'kubernetes', label: 'terraform', yaml: template) {
+    node ("terraform") {
+        container("terraform") {
+            stage ("Pull code") {
+                git branch: 'main', url: 'https://github.com/svalovtech/jenkins-april-2024.git'
+            }
 
-                                if (params.action == "apply") {
-                                    stage("Plan") {
-                                        sh """
-                                        cd terraform
-                                        terraform plan -out=tfplan -var-file=terraform.tfvars
-                                        """
-                                    }
+            stage ("Write tfvars") {
+                writeFile file: 'terraform.tfvars', text: """
+                ami_id = "${params.ami_id}"
+                region = "${params.region}"
+                """
+            }
 
-                                    stage("Apply") {
-                                        sh """
-                                        cd terraform
-                                        terraform apply -auto-approve -var-file=terraform.tfvars tfplan
-                                        """
-                                    }
-                                } else {
-                                    stage("Destroy") {
-                                        sh """
-                                        cd terraform
-                                        terraform destroy -auto-approve -var-file=terraform.tfvars
-                                        """
-                                    }
-                                }
-                            }
-                        }
+            withCredentials([usernamePassword(credentialsId: 'aws-creds', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
+                stage ("Init") {
+                    sh """
+                    cd terraform
+                    terraform init
+                    """
+                }
+
+                if (params.action == "apply") {
+                    stage ("Plan") {
+                        sh """
+                        cd terraform
+                        terraform plan -out=tfplan
+                        """
+                    }
+
+                    stage ("Apply") {
+                        sh """
+                        cd terraform
+                        terraform apply -auto-approve tfplan
+                        """
+                    }
+                } else {
+                    stage ("Destroy") {
+                        sh """
+                        cd terraform
+                        terraform destroy -auto-approve
+                        """
                     }
                 }
             }
