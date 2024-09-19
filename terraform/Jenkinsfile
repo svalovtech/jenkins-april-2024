@@ -1,27 +1,3 @@
-template = '''
-apiVersion: v1
-kind: Pod
-metadata:
-  name: terraform
-  labels:
-    run: terraform
-spec:
-  containers:
-  - name: terraform
-    image: hashicorp/terraform
-    command:
-    - sleep
-    - "3600"
-    '''
-
-properties([
-    parameters([
-        choice(choices: ['apply', 'destroy'], description: 'Choose action', name: 'action'),
-        string(name: 'ami_id', defaultValue: 'ami-037774efca2da0726', description: 'Enter AMI ID'),
-        choice(name: 'region', choices: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2'], description: 'Select AWS Region')
-    ])
-])
-
 podTemplate(cloud: 'kubernetes', label: 'terraform', yaml: template) {
     node ("terraform") {
         container("terraform") {
@@ -45,10 +21,17 @@ podTemplate(cloud: 'kubernetes', label: 'terraform', yaml: template) {
                 }
 
                 if (params.action == "apply") {
-                   stage ("Apply") {
+                    stage ("Plan") {
                         sh """
                         cd terraform
-                        terraform apply -auto-approve -var-file=terraform.tfvars
+                        terraform plan -out=tfplan -var-file=terraform.tfvars
+                        """
+                    }
+
+                    stage ("Apply") {
+                        sh """
+                        cd terraform
+                        terraform apply -auto-approve -var-file=terraform.tfvars tfplan
                         """
                     }
                 } else {
@@ -57,9 +40,9 @@ podTemplate(cloud: 'kubernetes', label: 'terraform', yaml: template) {
                         cd terraform
                         terraform destroy -auto-approve -var-file=terraform.tfvars
                         """
-}
-}
- }
- }
-  }
+                    }
+                }
+            }
+        }
+    }
 }
