@@ -13,3 +13,4 @@ locals {
     "us-west-1" = "us-west-1a"
     "us-west-2" = "us-west-2a"
   }[var.region]
+}
